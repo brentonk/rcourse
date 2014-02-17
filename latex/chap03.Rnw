@@ -1,0 +1,312 @@
+<<setup,echo=FALSE>>=
+options(prompt = "> ", continue = "+ ", useFancyQuotes = FALSE, width = 60,
+        str = strOptions(strict.width = "wrap"))
+@ 
+
+\chapter{Data Frames}
+
+Datasets in \R are usually stored as \texttt{data.frame} objects.  These are
+similar to matrices, but more flexible (and play more nicely with \R's data
+analysis functions).  This chapter will be an introduction to how to work with
+data frames and load datasets into \R.
+
+
+\section{Basics}
+
+\R\ comes with numerous datasets already loaded.  We'll use one of these ---
+\texttt{esoph}, which documents risk factors for esophageal cancer --- to
+illustrate the basic features of data frames.  To load the \texttt{esoph} data
+frame into your workspace, use the \texttt{data} command:\footnote{Fun fact:
+  users can overwrite functions that are built into \R\ by creating variables
+  with the same name.  So don't be foolish and name your dataset \texttt{data}
+  (or your matrix \texttt{matrix}, for that matter) when you're writing a
+  script.}
+<<loadesoph>>=
+data(esoph)
+@ %
+To see the full list of built-in datasets:
+<<showdatasets,eval=FALSE>>=
+data()
+@ %
+The \texttt{esoph} data frame looks like this:
+\begin{Schunk}
+\begin{Sinput}
+> esoph
+\end{Sinput}
+\begin{Soutput}
+   agegp     alcgp    tobgp ncases ncontrols
+1  25-34 0-39g/day 0-9g/day      0        40
+2  25-34 0-39g/day    10-19      0        10
+3  25-34 0-39g/day    20-29      0         6
+...
+87   75+      120+ 0-9g/day      2         2
+88   75+      120+    10-19      1         1
+\end{Soutput}
+\end{Schunk}
+There are five variables.  Notice that the first three are stored as text
+(actually, as we will see soon, as factors) while the last two are numbers.  For
+practical purposes, this is the main difference between data frames and matrices
+in \R.  A matrix can only store one type of data, while a data frame can manage
+multiple types.
+
+\subsection{Extracting Data}
+
+Some of the basic commands we used for matrices also work for data frames.
+<<simtomat>>=
+dim(esoph)  # dimensions
+nrow(esoph)  # number of rows
+esoph[1:4, ]  # indexing with brackets
+esoph[30:33, 2]
+esoph[30:33, "alcgp"]  # can also use variable names
+@ %
+Use \texttt{names} to get the list of variable names without printing the whole
+dataset.
+<<dfnames>>=
+names(esoph)
+@ %
+
+Remember how we used \texttt{\$} to extract elements from a list when we looked
+at the \texttt{eigen} and \texttt{qr} commands last chapter?  A data frame is
+just a special kind of list, so we can use \texttt{\$} here to extract
+variables.
+<<dollar1>>=
+esoph$ncases
+sum(esoph$ncases + esoph$ncontrols)
+@ %
+<<echo=FALSE,eval=FALSE>>=
+## extra dollar sign to keep auctex from getting confused
+##$
+@ %
+If you need to extract multiple variables at once and don't feel like typing
+\texttt{dataname\$varname} a bunch of times, use the \texttt{with} command.
+<<with>>=
+with(esoph, sum(ncases + ncontrols))
+@ %
+If you speak to students in the program who entered in 2009 or earlier, they may
+tell you to use the \texttt{attach} function for this kind of operation.
+\emph{Don't do it!}  I am not going to go through the \texttt{attach} function
+here, because its use often leads to code that isn't reproducible, errors that
+are hard to trace, and other obnoxious problems.
+
+\subsection{Summary Statistics}
+
+If you want to see what a dataset looks like without printing the whole thing to
+the \R\ console, the commands \texttt{head}, \texttt{tail},
+and \texttt{str} (as in ``structure'') come in handy.
+<<htstr>>=
+head(esoph)
+tail(esoph)
+str(esoph)
+@ %
+The \texttt{summary} command gives you basic summary statistics about the
+variables in a data frame.
+<<summary>>=
+summary(esoph)
+@ %
+The \texttt{Hmisc} package provides a \texttt{describe} command that is a
+slightly more full-featured version of \texttt{summary}.  To load the package:
+<<loadpack>>=
+library(Hmisc)
+@ %
+(Remember that \R\ is case-sensitive, so \texttt{library(hmisc)} won't work.)
+If this results in an error, you probably need to install the package:
+<<installpack,eval=FALSE>>=
+install.packages("Hmisc")
+@ %
+Now you can use the \texttt{describe} command:
+<<describe>>=
+describe(esoph)
+@ %
+
+\subsection{Manipulating Data}
+
+If you want to change a bunch of stuff at once within a data frame, the
+\texttt{transform} command is your friend.  Let's create a simple data frame:
+<<makedata>>=
+ourData <- data.frame(var1 = 1:5, var2 = 2:6, var3 = 10:6)
+ourData
+@ %
+To rescale the first two variables by $1/10$:
+<<transform1>>=
+ourData <- transform(ourData,
+                     var1 = var1 / 10,
+                     var2 = var2 / 10)
+ourData
+@ %
+To create three new variables out of combinations of the first three:
+<<transform2>>=
+ourData <- transform(ourData,
+                     var4 = var1 + var2,
+                     var5 = var1 + var3,
+                     var6 = var2 + var3)
+ourData
+@ %
+And so on.
+
+
+\section{Factors}
+
+The first three columns of \texttt{esoph} contain a type of data we haven't
+dealt with yet: \emph{factor} variables.  This is how \R\ stores categorical
+data.  Since there is virtually no plausible regression model in political
+science\footnote{To be more precise, no regression model that could plausibly
+  get three reviewers for a political science journal to sign off on it.} that
+doesn't include some kind of categorical control (e.g., race of a survey
+respondent, regime type of a country), you should know how to use factors.
+
+When you print the contents of a factor variable to the \R\ console, you see
+text followed by a list of ``levels'':
+<<factor1>>=
+head(esoph$alcgp)
+@ %
+This may lead you to believe that factors are just character variables.  This is
+false!  To find out whether \R\ thinks a variable containing text is a factor,
+check its \texttt{class}:
+<<factorclass>>=
+class(esoph$alcgp)  # is a factor
+x <- c("a", "a", "b", "c", "a")
+class(x)  # not a factor
+@ %
+Luckily, you can easily convert a character variable to a factor with
+\texttt{as.factor}.
+<<asfactor>>=
+xfactor <- as.factor(x)
+xfactor
+class(xfactor)
+@ %
+If the difference between factors and characters seems unimportant to you now,
+don't worry.  You will thank me later --- possibly much later --- when you're
+using some kind of non-standard regression model with categorical data and it
+throws up an indecipherable error message about how it doesn't recognize
+character variables.
+
+We'll spend more time with factors in our next session when we start running
+regressions in \R.  Until then, here are some basic things you can do with
+factors.  Use \texttt{levels} and \texttt{nlevels} to get the names of the
+levels and how many there are.
+<<lev>>=
+levels(xfactor)
+nlevels(xfactor)
+@ %
+\texttt{table} lets you see how many instances there are within each level.
+<<table>>=
+table(xfactor)
+@ %
+The \texttt{table} command actually also works for other kinds of variables too.
+<<table1>>=
+## random draws from Binomial(6, 0.5)
+y <- rbinom(1000, size = 6, prob = 0.5)
+table(y)
+table(y) / 1000  # estimated probabilities
+@ %
+
+
+\section{Loading and Saving Data}
+
+From last session's material, you already know how to \texttt{load} and
+\texttt{save} \R\ objects.  So if there is a data frame stored as \R\ data
+(typically in a \texttt{.rda} or \texttt{.RData} file), you know what to do.
+Sadly, approximately 0\% of all political science datasets are distributed in
+this format.  So let's see what to do with two popular formats: comma-separated
+values (CSV) and Stata \texttt{.dta} files.
+
+\subsection{Comma-Separated Values}
+
+This is generally the format you should distribute data in, since it can be read
+by any spreadsheet or statistical program.  A CSV file is simply a text file
+where each row is a row of data, where fields are separated by commas.  A
+typical CSV file looks something like this:
+\begin{verbatim}
+"var1","var2","var3","var4"
+1.25,2.75,3.45,"D"
+4.1,2.886,3.99,"A"
+8.23,1.789,2.3,"B"
+...
+2.212,1.2,3.917,"A"
+\end{verbatim}
+To load a dataset in CSV format, use the \texttt{read.csv} command.  For
+example, download the file \texttt{data1.csv} from the course website
+(\url{http://www.bkenkel.com/teaching.html}) to your \texttt{Z:}
+drive,\footnote{Or, if you're a laptop-using scofflaw, to your working
+  directory: \texttt{getwd()}.} then run:
+\begin{Schunk}
+\begin{Sinput}
+> data1 <- read.csv("z:/data1.csv")
+> data1
+\end{Sinput}
+\begin{Soutput}
+           x       y z
+1  -0.262011 0.20830 a
+2  -0.168523 0.01383 b
+3  -0.226056 1.74640 c
+4   0.651193 0.31098 d
+5   0.637790 1.12686 e
+6   0.083914 0.39382 e
+7  -0.136230 0.51429 d
+8  -0.450585 0.96430 c
+9   0.341704 1.08622 b
+10 -2.120221 1.22373 a
+\end{Soutput}
+\end{Schunk}
+Notice that, unlike the \texttt{load} command we used last time, you must assign
+the data frame to a variable.  Otherwise, if you run \texttt{read.csv} without
+making an assignment, it just prints the data frame to the \R console ---
+typically not what you want.
+
+To save a data frame in CSV format, use \texttt{write.csv}.  Unless you've
+created row names via the \texttt{rownames} command, you typically want to set
+\texttt{row.names = FALSE}.
+<<writecsv,eval=FALSE>>=
+write.csv(data1, file = "z:/mydata1.csv", row.names = FALSE)
+@ %
+
+\subsection{Stata \texttt{.dta}}
+
+To read in Stata files, you need to load up the \texttt{foreign} package and use
+its \texttt{read.dta} command.  For this example, download the file
+\texttt{data2.dta} from the course website.
+\begin{Schunk}
+\begin{Sinput}
+> library(foreign)
+> data2 <- read.dta("z:/data2.dta")
+> data2
+\end{Sinput}
+\begin{Soutput}
+   var1      var2  var3     var4
+1     0 -0.239443  bear  0.83674
+2     1  1.211068 moose -0.38043
+3     1 -9.263507 pizza  0.64275
+4     0  0.098341 pizza -0.19735
+5     1  0.436587 moose  1.19144
+6     0  0.207671  bear  2.10379
+7     0 -2.340137 moose  0.28661
+8     0 -2.240873  bear -0.55143
+9     1  0.217004  bear -0.16988
+10    1  0.264562 pizza -0.83495
+\end{Soutput}
+\end{Schunk}
+For the sake of completeness, I'll mention that you can save data frames in
+\texttt{.dta} format using \texttt{write.dta}.  However, I don't know \emph{why}
+you would want to do this: CSV files can be used by anyone anywhere.
+
+If a \texttt{.dta} file comes from a new edition of Stata, you may receive an
+error causing \texttt{read.dta} to fail.  Here are the steps I recommend taking
+if this happens:
+\begin{enumerate}
+\item Check that you are running the latest version of \R
+\item Run the command
+<<oldpack,eval=FALSE>>=
+old.packages()
+@ %
+to see which of your packages needs to be updated.  If \texttt{foreign} appears
+in the list, run
+<<updpack,eval=FALSE>>=
+update.packages(oldPkgs = "foreign")
+@ %
+to update it.
+\item Try \texttt{read.dta} again
+\item See if the \texttt{?read.dta} help page has any insight about the Stata
+data file version you're trying to load from
+\item If all this has failed, go to \textsc{the star lab}, open the data file in
+Stata, and export it to CSV format
+\end{enumerate}

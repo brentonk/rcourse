@@ -1,0 +1,198 @@
+\setkeys{Gin}{width=0.9\textwidth}
+\SweaveOpts{height=3.25}
+<<setup,echo=FALSE>>=
+options(prompt = "> ", continue = "+ ", useFancyQuotes = FALSE, width = 60,
+        str = strOptions(strict.width = "wrap"), digits = 5)
+@ 
+
+\chapter{Generalized Least Squares}
+
+In this chapter, we'll cover weighted least squares (WLS) and generalized least
+squares (GLS) estimators.  These are actually pretty easy to implement in \R
+once you know your way around the \texttt{lm} command, so I'm going to use this
+topic as an excuse to introduce you to some more intermediate simulation
+techniques in \R.
+
+
+\section{Weighted Least Squares}
+
+Consider the heteroscedastic regression model
+\begin{displaymath}
+  \mathbf{y} = \mathbf{X} \beta + \mathbf{u},
+\end{displaymath}
+where $E[\mathbf{u} \mathbf{u}'] \equiv \Sigma$ with $\Sigma_{ij} = 0$ for all
+$i, j$ but potentially $\Sigma_{ii} \neq \Sigma_{jj}$.  As you've already seen
+in PSC 405, it is best to estimate this model by weighting each observation $i$
+by $1 / \Sigma_{ii}$.  The OLS estimate of $\beta$ is unbiased but inefficient,
+and the estimated standard errors from OLS will be wrong.
+
+Let's examine these properties by simulating our own data.  Suppose we have
+\begin{displaymath}
+  y_i = 1 + 2 x_i + \epsilon_i,
+\end{displaymath}
+with $N = 5$, $x_i \sim N(0, 1)$ and
+\begin{displaymath}
+  \Sigma =
+  \begin{bmatrix}
+    0.25 & 0 & 0 & 0 & 0 \\
+    0    & 0.5 & 0 & 0 & 0 \\
+    0    & 0   & 1 & 0 & 0 \\
+    0    & 0   & 0 & 2 & 0 \\
+    0    & 0   & 0 & 0 & 4
+  \end{bmatrix}.
+\end{displaymath}
+By now you all should be able to simulate a single dataset according to this
+model and run an OLS regression on it.
+<<easy>>=
+sigma <- c(0.25, 0.5, 1, 2, 4)
+x <- rnorm(5)
+e <- rnorm(5, sd = sqrt(sigma))
+y <- 1 + 2*x + e
+fitOLS <- lm(y ~ x)
+fitOLS
+@ %
+To run weighted least squares instead, just use the \texttt{weights} argument.
+<<wls1>>=
+fitWLS <- lm(y ~ x, weights = 1 / sigma)
+fitWLS
+@ %
+
+What if you didn't believe my claim that WLS is more efficient than OLS?  Well,
+that would be silly, since it's a standard result in any econometrics textbook
+and you probably proved it in PSC 405.  But if you really wanted to reassure
+yourself, you could simulate the sampling distributions of $\hat{\beta}_{OLS}$
+and $\hat{\beta}_{WLS}$.  To be more specific, you could simulate the dataset
+many times, run each estimator in each iteration, and save the results.  The
+easiest way to do this in \R is with the \texttt{replicate} command.
+
+Before getting into that relatively involved simulation, let's illustrate
+\texttt{replicate} with a couple of simple examples.
+<<repl1>>=
+replicate(10, runif(1))
+@ %
+This performs the command \texttt{runif(1)} ten times and stores the results in
+a vector.  So it's basically a less computationally efficient version of
+\texttt{runif(10)} --- but useful for illustration.
+<<repl2>>=
+replicate(5, rnorm(2))
+@ %
+This performs the command \texttt{rnorm(2)} five times and stores the results in
+a $2 \times 5$ matrix.  Again, this could be accomplished more easily by running
+\texttt{rnorm(10)} and then reshaping the results into a matrix.  But what if
+you wanted to perform a simulation with intermediate steps?  For example,
+suppose you wanted to repeat the following 10 times and save the results
+<<replex>>=
+a <- rexp(10)
+b <- runif(10, -a, a)
+z <- rnorm(10, sd = sqrt(a + b^2))
+max(abs(z))
+@ %
+You could copy and paste that block of code 10 times in your script, but that
+would be unwieldy and error-prone, and it would probably result in your PSC 505
+TA giving you an F.  To do this with \texttt{replicate}, you can use your trusty
+friend the curly brackets:
+<<repl3>>=
+replicate(10, {
+    a <- rexp(10)
+    b <- runif(10, -a, a)
+    z <- rnorm(10, sd = sqrt(a + b^2))
+    max(abs(z))
+})
+@ %
+With a large enough sample, you could even get pretty good estimates of the mean
+and variance of this random variable.\footnote{Though this is much less fun than
+  using moment-generating functions, am I right?}
+
+By now you probably see where I'm going with this.  Let's go back to our
+regression example.  Suppose you wanted to generate 100 samples of data and
+store the coefficients from OLS and GLS on each.
+<<repl4>>=
+ourSim <- replicate(100, {
+    x <- rnorm(5)
+    e <- rnorm(5, sd = sqrt(sigma))
+    y <- 1 + 2*x + e
+    fitOLS <- lm(y ~ x)
+    fitWLS <- lm(y ~ x, weights = 1/sigma)
+    c(coef(fitOLS), coef(fitWLS))
+})
+@ %
+This gives us a $4 \times 100$ matrix whose first two rows are OLS coefficients
+and whose last two rows are WLS coefficients.  We can use the \texttt{rowMeans}
+command to (roughly) confirm that both estimators are unbiased.
+<<bias>>=
+rowMeans(ourSim)
+@ %
+These are very close to the true values, as we would expect since the estimators
+are unbiased.  Unfortunately \R doesn't have a \texttt{rowVars} command, so
+we'll have to dig a bit more into the weeds to compute the
+variances.\footnote{Yes, you could run \texttt{var(ourSim[1, ])},
+  \texttt{var(ourSim[2, ])}, etc, all separately, or if you're quite clever you
+  could even do \texttt{diag(var(t(ourSim)))}, but my real point here is to
+  familiarize you with \texttt{apply}.}  You want to take the \texttt{var}
+function and apply it to each row of the \texttt{ourSim} matrix.  To do that,
+use the apply function:
+<<apply1>>=
+apply(ourSim, 1, var)
+@ %
+If you'd wanted to take the variance of each column instead, you would have run
+\texttt{apply(ourSim, 2, var)} --- the second argument tells \texttt{apply}
+which dimension of the matrix to travel along.  Getting back to the point,
+notice that the variances of the WLS estimates are much lower than those of the
+OLS estimates, as you'd expect.
+
+
+\section{Generalized Least Squares}
+
+Suppose now that the off-diagonal elements of $\Sigma$ may be non-zero.  In the
+vanishingly unlikely event that you know the complete form of $\Sigma$, you may
+estimate $\beta$ via the \texttt{MASS} package's function \texttt{lm.gls}.
+First let's construct such a weight matrix and simulate some data.  In
+particular we'll use an AR(1) autocorrelation structure with $\phi = 0.5$.
+<<hideme,echo=FALSE>>=
+## don't want to deal with estimates at the boundary
+set.seed(22)
+@ 
+<<makesigma>>=
+phi <- 0.5
+N <- 10
+Sigma <- diag(N)
+Sigma <- phi^abs(row(Sigma)-col(Sigma))
+Sigma
+@ %
+We'll simulate our data according to the same regression equation as before.
+Note that we need to use \texttt{mvrnorm} from the \texttt{MASS} package to draw
+errors from a multivariate normal distribution.
+<<makedata>>=
+library(MASS)
+x <- rnorm(N)
+e <- mvrnorm(1, mu = rep(0, N), Sigma = Sigma)
+y <- 1 + 2*x + drop(e)
+fitOLS <- lm(y ~ x)
+fitOLS
+fitGLS <- lm.gls(y ~ x, W = solve(Sigma))
+fitGLS$coefficients
+@ %
+<<echo=FALSE,eval=FALSE>>=
+## extra dollar sign to keep auctex from getting confused
+##$
+@ %
+
+This is all well and good, but it's not a situation you're ever really going to
+be in.  A more realistic scenario would be to assume that the general structure
+of the weights matrix is known (e.g., that it is an AR(1) autocorrelated
+process) but that its free parameters (e.g., $\phi$) are unknown and to be
+estimated.  For this we want the \texttt{gls} function from the \texttt{nlme}
+package, which despite its name actually performs \emph{feasible} GLS
+estimation.
+<<glsfn>>=
+library(nlme)
+fitFGLS <- gls(y ~ x, correlation = corAR1())
+fitFGLS
+@ %
+Note that the FGLS estimate of $\phi$ is consistent but not unbiased.  I leave
+it as an exercise to you to convince yourself of this using \texttt{replicate}.
+The one hint I'll give you --- since this took me a little while to figure out
+--- is that you can extract $\hat{\phi}$ from a fitted GLS object using
+<<getglsphi>>=
+coef(fitFGLS$modelStruct, unconstrained = FALSE)
+@ %

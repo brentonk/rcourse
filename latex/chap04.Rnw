@@ -1,0 +1,229 @@
+\setkeys{Gin}{width=0.9\textwidth}
+\SweaveOpts{height=3.25}
+<<setup,echo=FALSE>>=
+options(prompt = "> ", continue = "+ ", useFancyQuotes = FALSE, width = 60,
+        str = strOptions(strict.width = "wrap"))
+@ 
+
+\chapter{Plots}
+
+We now will start working with \R's excellent graphics capabilities.  I should
+start with a disclaimer that applies to all of the segments of this course, but
+especially this one: we're only going to be scratching the surface of this
+topic.  The base graphics engine in \R has enough capabilities that an entire
+course could be devoted to it alone, and add-on graphics packages --- notably
+\texttt{ggplot2}, which has quickly won the affection of data visualization
+nerds everywhere --- can do even more.
+
+The best way to learn about plotting in \R is to read the help pages and
+experiment with the various options available.  There are also websites with
+sample graphs and the code to produce them, such as
+\url{http://addictedtor.free.fr/graphiques/allgraph.php}.
+
+
+\section{Scatterplots}
+
+For today's examples, we'll use the \texttt{Duncan} data on occupational
+prestige from the \texttt{car} package.
+<<duncan>>=
+library(car)  # scofflaws may need to install
+data(Duncan)
+str(Duncan)
+@ %
+As we learned last time, we can access the variables within \texttt{Duncan}
+using syntax like \texttt{Duncan\$variable} or \texttt{with(Duncan, variable)}.
+But let's just make things easy on ourselves for the rest of this session and
+make global assignments of the key variables.
+<<assign>>=
+income <- Duncan$income
+prestige <- Duncan$prestige
+type <- Duncan$type
+@ %
+<<echo=FALSE,eval=FALSE>>=
+## extra dollar sign to keep auctex from getting confused
+##$
+@ %
+
+To make a scatterplot with income on the $x$-axis and prestige on the $y$-axis,
+use the \texttt{plot} command:
+\begin{center}
+<<plot,fig=TRUE>>=
+plot(income, prestige)
+@ %
+\end{center}
+You can set the axis labels and plot title using the \texttt{xlab},
+\texttt{ylab}, and \texttt{main} arguments.
+\begin{center}
+<<plot1,fig=TRUE>>=
+plot(income, prestige,
+     xlab = "Income", ylab = "Occupational Prestige",
+     main = "My Banal Plot")
+@ %
+\end{center}
+If you want to use Greek letters, sub/superscripts, or other mathematical
+features, there's a \LaTeX-like syntax described in \texttt{?plotmath}.  To wit:
+\begin{center}
+<<plotmath,fig=TRUE>>=
+plot(income, prestige,
+     xlab = expression(x[1] - x[2] == (alpha + beta)^2))
+@ 
+\end{center}
+There are many other arguments to change basic features of the plot like the
+axis limits.  Most of these arguments are described in \texttt{?plot.default}.
+
+You can use the \texttt{pch} argument to change the type of points used in a
+scatterplot.
+\begin{center}
+<<pch,fig=TRUE>>=
+plot(1:25, 1:25, pch = 1:25)
+@ %
+\end{center}
+The \texttt{col} option can be used to change the color of the points.
+\begin{center}
+<<col,fig=TRUE>>=
+plot(income, prestige, col = "blue")
+@ %
+\end{center}
+There are, of course, many more graphical options.  These can be found in the
+\texttt{?par} help page.
+
+You can add points to an existing plot using the \texttt{points} command.  Let's
+use this to show blue collar workers in blue and others in black.
+\begin{center}
+<<bc,fig=TRUE>>=
+plot(income[type == "bc"], prestige[type == "bc"],
+     pch = 20, col = "blue")
+points(income[type != "bc"], prestige[type != "bc"],
+       pch = 20, col = "black")
+@ %
+\end{center}
+You can superimpose lines using the \texttt{abline} command.  The \texttt{lty}
+option controls whether the line is solid, dotted, etc.
+\begin{center}
+<<abline,fig=TRUE>>=
+plot(income, prestige)
+abline(h = 30, lty = 1)  # horizontal
+abline(v = 50, lty = 2)  # vertical
+abline(a = 60, b = -1, lty = 3)  # slope-intercept
+@ %
+\end{center}
+To superimpose a bivariate regression line, use \texttt{abline(lm(y ~ x))}.
+(We'll be talking more about the \texttt{lm} command, which runs linear
+regressions, very soon.)
+\begin{center}
+<<ablinelm,fig=TRUE>>=
+plot(income, prestige)
+abline(lm(prestige ~ income), lty = 2)
+@ %
+\end{center}
+
+One more thing you might want to do is put multiple plots together in a single
+graphic.  To do this, run \texttt{par(mfrow = c(nrow, ncol))} and then make your
+plots.
+\begin{center}
+<<parmfrow,fig=TRUE>>=
+par(mfrow = c(1, 2))
+plot(income, prestige, col = "red")
+plot(income, prestige, col = "blue")
+@ %
+\end{center}
+You can change other low-level graphical elements, such as the plot margins,
+using \texttt{par}.
+
+
+\section{Other Plots: A Quick Cookbook}
+
+Scatterplots aren't all you can make in \R.  Below I'm going to give just a few
+basic examples of other types of plots, mainly so you know what the commands are
+called and can look at their help pages.  Most of the graphical options we met
+above, like \texttt{pch} and \texttt{lty}, carry over to these plots too.
+
+\subsection{Histogram}
+
+\begin{center}
+<<hist,fig=TRUE>>=
+hist(income)
+@ 
+\end{center}
+
+\subsection{Density Plot}
+
+\begin{center}
+<<density,fig=TRUE>>=
+plot(density(prestige))
+@ 
+\end{center}
+
+\subsection{Box Plot}
+
+\begin{center}
+<<box,fig=TRUE>>=
+plot(type, income)
+@ 
+\end{center}
+
+\subsection{Bar Plot}
+
+(aka the box plot's uglier, less informative cousin)
+
+\begin{center}
+<<bar,fig=TRUE>>=
+avg.bc <- mean(income[type == "bc"])
+avg.prof <- mean(income[type == "prof"])
+avg.wc <- mean(income[type == "wc"])
+avg <- c(avg.bc, avg.prof, avg.wc)
+barplot(avg, names = levels(type))
+@ 
+\end{center}
+
+\subsection{Line Plot}
+
+\begin{center}
+<<line,fig=TRUE>>=
+data(sunspot.year)
+plot(1700:1988, sunspot.year, type = "l")
+@ 
+\end{center}
+
+\subsection{Text Plot}
+
+\begin{center}
+<<text,fig=TRUE>>=
+x <- runif(26)
+y <- runif(26)
+plot(x, y, type = "n")  # set up axes without placing points
+text(x, y, labels = letters)
+@ 
+\end{center}
+
+
+\section{Exporting Graphics}
+
+To place a graphic in a research paper, you need to export it to a format that
+\LaTeX\ can read, typically PDF.  The best way to make PDFs of \R graphics is
+the \texttt{pdf} command:
+<<pdf1,eval=FALSE>>=
+pdf(file = "mygraph1.pdf")
+plot(income, prestige)
+abline(lm(prestige ~ income))
+dev.off()
+@ %
+Here's roughly how the sequence of commands works:
+\begin{enumerate}
+  \item The \texttt{pdf} command opens a connection to the PDF graphics device.
+  \item The graphics device executes your plotting commands (just like the
+  standard interactive graphics device does when you run plotting commands
+  without running \texttt{pdf()} first).
+  \item \texttt{dev.off()} tells the graphics device to shut down and write its
+  contents to the file you originally specified.
+\end{enumerate}
+You can change the width or height of the output PDF using the \texttt{width}
+and \texttt{height} arguments.
+<<pdf2,eval=FALSE>>=
+pdf(file = "mygraph2.pdf", width = 10, height = 3)
+plot(income, prestige)
+dev.off()
+@ %
+Many file types other than PDF are supported; see \texttt{?Devices} for a list.
+If you create a plot with tens of thousands of points, it is often wise to use a
+device other than PDF to ensure that the resulting file isn't unduly large.

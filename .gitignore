@@ -1,0 +1,22 @@
+## Problem sets
+hw/*
+
+## Previous iterations of the course
+resources/*
+
+## LaTeX intermediate files
+*.aux
+*.log
+*.out
+*.pyg
+*.toc
+
+## Generated Sweave output and graphics
+latex/chap??.tex
+latex/chap??-*.pdf
+
+## The final output
+latex/rcourse.pdf
+
+## R history
+.Rhistory

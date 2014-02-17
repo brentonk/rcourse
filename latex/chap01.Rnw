@@ -1,0 +1,724 @@
+<<setup,echo=false>>=
+options(prompt = "> ", continue = "+ ", useFancyQuotes = FALSE, width = 60)
+@ 
+
+\chapter{Basics of \R}
+
+What is \R?
+\begin{itemize}
+  \item A programming language designed for statistical applications
+  \item A statistical environment for data analysis
+  \item Something you need to learn if you want to get by in PSC 405 and PSC 505
+\end{itemize}
+
+\smallskip%
+\noindent Why do we like \R\ so much?
+\begin{itemize}
+  \item It's free and open-source
+  \item It's cross-platform --- the same code will produce the same results on
+  Windows, Mac, or Linux
+  \item It's easy to use and to program with\footnote{Some folks in the
+    department may tell you that ``\textsf{Stata} is better/easier for
+    \texttt{x},'' but unless \texttt{x} is heavy-duty time series econometrics,
+    they're wrong.}
+  \item It's regularly updated --- there's a new major version roughly every
+  year, with intermediate revisions every 4--5 months
+  \item It's becoming the \textit{lingua franca} of serious empirical work in
+  political science
+  \item It's already the \textit{lingua franca} of applied statistics
+  \item There are thousands of user-contributed packages --- if a statistical
+  technique has been published in a reputable journal, there's probably an \R\
+  package for it\footnote{\textit{Caveat emptor}: although contributed packages
+    --- those that aren't included with the default \R\ installation --- are
+    vetted to ensure they won't give your computer a virus, they are \emph{not}
+    tested to see if they give you the right answer.  Later on in the course,
+    I'll go over some basic heuristics for whether you should trust results from
+    a contributed package.}
+\end{itemize}
+
+\smallskip%
+\noindent What should you use \R\ for?
+\begin{itemize}
+  \item All of your basic data analysis: descriptive statistics, linear
+  regressions, logits, probits, duration models, etc.
+  \item Programming your own estimators and statistical models (the main goal of
+  PSC 505)
+  \item Numerical simulations --- examining the properties of an estimator under
+  a given probabilistic data-generating process when pen-and-paper analysis is
+  infeasible (this is very useful and will also be covered in PSC 505)
+  \item Any kind of plotting --- \R's graphical capabilities are widely
+  recognized as superior to those of any other statistical
+  environment\footnote{Seeing \textsf{Stata} plots in journal articles makes me
+    gag a little.  Seeing Excel plots makes me lose my lunch.}
+\end{itemize}
+
+\smallskip%
+\noindent What \emph{shouldn't} you use \R\ for?
+\begin{itemize}
+  \item Most non-statistical programming or scripting (e.g., web scraping) ---
+  it's possible to use \R\ for this, but \textsf{Python} is easier and better
+  documented
+  \item Extremely memory-intensive statistical applications that cause \R\ to
+  crash or run at a snail's pace --- for this kind of thing you will want to
+  learn a compiled language like \textsf{C}/\textsf{C++}\footnote{The number of
+    situations where this applies is getting smaller since memory is getting
+    cheaper, as always.  Also, many problems that would apparently fall into
+    this category can actually be fixed with basic parallel computing, which
+    you'll also be learning in PSC 505.}
+  \item Looking cool in front of your high school friends --- I've tried, it
+  doesn't work
+\end{itemize}
+
+
+\section{Installing \R}
+
+If you plan to do all your work in \textsc{the star lab}, this section doesn't
+apply to you.  But if you don't want to consign yourself to dozens of endless
+nights in our cold, windowless computer lab, you probably want to know how to
+install \R\ on your home computer.
+
+\begin{enumerate}
+  \item Go to the Comprehensive \R\ Archive Network (CRAN) website at
+  \url{http://cran.r-project.org}
+  \item Click on the appropriate ``Download \R\ for [your operating system
+  here]'' link (descriptions below accurate as of 11 January 2012)
+  \begin{description}
+    \item[Windows] Go to the \texttt{base} subdirectory and click the big
+    ``Download \R\ 2.X.X for Windows'' at the top
+    \item[Mac] Click the first download link under ``Files,'' which will be
+    labeled ``R-2.X.X.pkg (latest version)''
+    \item[Linux] Choose the subdirectory that corresponds to your Linux
+    distribution, or download the source code from the homepage and compile it
+    yourself\footnote{If you're on Ubuntu or another Debian-like distribution, I
+      recommend getting \R\ from the repositories provided by CRAN rather than
+      the standard ones, as they are updated much more frequently.}
+  \end{description}
+  \item Run the executable you downloaded
+\end{enumerate}
+
+As I mentioned above, \R\ is updated often.  You should keep up to date, because
+the updates contain speed improvements, bug fixes, and new features.  The
+easiest way to know when a new version is coming out is to subscribe to the
+\texttt{R-announce} listserv at
+\url{https://stat.ethz.ch/mailman/listinfo/r-announce}.  Don't worry about this
+list flooding your inbox: it sends about one email every two months, either to
+announce a new version of \R\ coming out in the future, or to list the features
+and improvements in a version that has just been released.
+
+\section{The \R\ Prompt}
+
+When you first start \R\, you'll first see a message listing the version of \R\
+you're using, information about the software license, and a few other basic
+commands.  Below that is the \emph{prompt}, which looks like this:
+<<prompt1,eval=false>>=
+ 
+@
+This means \R\ is waiting for you to enter a command.  What you type appears
+next to the prompt, and you run it by hitting \texttt{Enter}.  Usually, after
+you enter a command, \R\ displays the output and then brings back the prompt.
+<<prompt2>>=
+1 * 1
+
+@
+You can scroll through previous commands you've entered by using the up and down
+arrows on your keyboard.
+
+Sometimes, instead of giving you the prompt again, \R\ will instead display a
+\texttt{+}, known as a \emph{continuation line}.  This means you entered an
+unfinished command and that \R\ is waiting on additional input.
+<<contline>>=
+2 *
+2
+@ 
+To get out of a continuation line and bring back the prompt, hit \texttt{Esc} or
+\texttt{Ctrl-C}.
+
+On a final note, anything folllowing a \texttt{\#} is a \emph{comment} and is
+ignored by \R.  You will be using comments often when writing \R\ scripts.
+<<comment>>=
+3 + 3
+3 + 3  # + 20
+@ 
+
+\section{Arithmetic in \R}
+
+As you saw in the examples above, the simplest use of \R\ is as a calculator.
+All of the basic mathematical operators are available: \texttt{+} and \textit{-}
+for addition and subtraction, \texttt{*} and \texttt{/} for multiplication and
+division, \texttt{\^} for exponents, \texttt{\%\%} for modulo, and \texttt{\%/\%}
+for integer division.
+
+You should familiarize yourself with the basic rules of operator precedence;
+e.g., the fact that $3 \times 2 + 1 = (3 \times 2) + 1 \neq 3 \times (2 + 1)$.
+\R\ follows all of the standard rules.  If you don't feel like learning the
+rules, you may use parentheses to your heart's content.
+<<precedence>>=
+3 * 2 + 1
+3 * (2 + 1)
+(3 * 2) + 1
+2^2 + 5
+2^(2 + 5)
+@ 
+
+Many basic mathematical functions are available as well.
+<<mathfun>>=
+log(10)
+log(10, base = 10)
+exp(1)
+sin(0)
+acos(-1)
+@
+The \texttt{base} option in the \texttt{log} function is known as an
+\emph{argument}.  If \texttt{base} isn't specified, \R\ assumes you want the
+natural logarithm.  We'll talk more about function arguments and how to discover
+them in just a bit.
+
+\R\ follows the time-honored principle of ``garbage in, garbage out,'' which we
+can see by asking it to take the logarithm of numbers that don't have
+well-defined logarithms.
+<<infnan>>=
+log(0)
+log(-1)
+@ 
+\texttt{-Inf} stands for $-\infty$, of course.  \texttt{NaN} means ``not a
+number,'' which is \R's polite way of telling you that you asked it to generate
+nonsense.
+
+
+\section{Assigning Variables}
+
+When you're using \R\ for data analysis, you'll want to refer to the same
+computations repeatedly without having to type them out each time.  You can do
+this by assigning those computations as \emph{variables}, which you can then
+refer to by name.
+
+An assignment statement in \R\ looks like this:
+<<assign1>>=
+x <- exp(1)
+@ %
+The ``arrow,'' \texttt{<-}, is the assignment command.  On the left side of the
+arrow is the name of the variable we have created.  On the right side is the
+value that we have assigned to it.  We can now use \texttt{x} at the prompt like
+any other number. \nolinebreak
+<<assign2>>=
+x
+x - 2
+log(x)
+@ %
+If you want to assign a new value to a variable, just use the arrow again:
+<<assign3>>=
+x <- exp(2)
+x
+@ %
+
+\subsection{Naming Variables}
+
+Variable names can be as long or short as you want.  When you are writing code
+or performing analysis for your research, it is often useful to use descriptive
+names.  This way, if you leave your code dormant for six months, you can pick it
+up again and know what's going on.
+<<naming1>>=
+n <- 10  # not descriptive
+numberOfStudents <- 10  # better
+@ %
+There are few restrictions on variable names in \R.  The main rules are that
+variable names must start with a letter and may not contain punctuation other
+than periods and underscores.  So \texttt{number.of.students} and
+\texttt{number\_of\_students} are valid, while \texttt{number-of-students} is
+not.
+
+\subsection{Removing Variables}
+
+Use the \texttt{ls} command to see a list of the variables that have been
+assigned.
+<<ls>>=
+ls()
+@ %
+To remove a variable from memory, use \texttt{rm}.  This \emph{cannot} be
+undone, so be careful!
+<<rm>>=
+rm(numberOfStudents)
+ls()
+@ %
+If you want to get rid of everything, use \texttt{rm(list = ls())}.  This is
+sure to ruin your day at least once when you're doing some analysis that takes
+forever and forgot to save the results.
+<<rmlist>>=
+rm(list = ls())
+ls()
+@ %
+\texttt{character(0)} is \R's way of saying ``This is a vector that is supposed
+to contain text, but there's nothing in it.''
+
+
+\section{Vectors}
+
+You may have noticed that when you perform a simple calculation in \R, a
+\texttt{[1]} appears next to the result.
+<<whyone>>=
+2+2
+@ %
+This is because \R\ thinks of all numbers as \emph{vectors}.  If you enter a
+scalar computation like \texttt{2+2}, \R\ considers it the addition of two
+vectors of length 1.  The \texttt{[1]} is to tell you that the adjacent entry is
+the first entry of the output vector.
+
+The simplest way to represent a vector in \R\ is to use the \texttt{c} command,
+with each entry separated by commas.  For example, to represent the vector
+$\mathbf{x} = (1, 4, 6, 1)$, you would enter
+<<vector1>>=
+x <- c(1, 4, 6, 1)
+x
+@ %
+\texttt{c} stands for ``concatenate,'' so you can also use it to string a bunch
+of different vectors together.
+<<vector2>>=
+y <- c(2, 3, 2, 1)
+c(y, y, y, x, x, x, y, y, x, x)
+@ 
+
+\subsection{Vector Operations}
+
+Almost all of \R's standard mathematical functions (including the basic
+arithmetic operations) work with vectors.
+<<vector2>>=
+x + y
+x / y
+log(x)
+@ %
+There are plenty of additional mathematical and statistical commands that
+operate on vectors, usually with intuitive names.
+<<vector3>>=
+sum(x)
+prod(x)
+mean(x)
+median(x)
+sd(x)
+@ %
+You can use \texttt{sort} to put the entries of a vector in order, \texttt{rev}
+to reverse it, and \texttt{length} to find out how many entries it has.
+<<vector4>>=
+sort(x)
+rev(sort(x))
+sort(x, decreasing = TRUE)
+length(x)
+@ %
+
+\subsection{Creating Vectors}
+
+There are ways to create vectors according to patterns without having to type
+out all their entries individually.  The easiest way is with the colon.
+<<colon>>=
+1:20
+50:30
+@ %
+A more general version of the colon is \texttt{seq}.
+<<seq>>=
+seq(0, 10)
+seq(0, 10, by = 2)
+seq(0, 1, length.out = 11)
+@ %
+The \texttt{rep} command lets you repeat things.
+<<rep>>=
+rep(10, times = 3)
+rep(x, times = 3)
+rep(x, each = 3)
+@ %
+
+\subsection{Indexing}
+
+You'll often want to extract elements from a vector---either specific elements
+or via a pattern.  In either case, you'll use square brackets.
+<<extract>>=
+z <- seq(0, 20, by = 2)
+z[3]  # 3rd entry
+z[c(3, 10)]  # 3rd and 10th entries
+z[-c(3, 10)]  # all but the 3rd and 10th
+@ %
+To extract via a pattern, you'll need to know something about \emph{logical
+  comparisons}.  For example, the elements of \texttt{z} greater than 10 are
+given by:
+<<logic1>>=
+z > 10
+@ %
+To extract these, put the logical statement within the brackets:
+<<logic2>>=
+z[z > 10]
+@ %
+The full list of logical operators is:
+\begin{center}
+  \begin{tabular}{cl}
+    Operator & Meaning \\ \hline
+    \texttt{<} & less than \\
+    \texttt{<=} & less than or equal to \\
+    \texttt{>} & greater than \\
+    \texttt{>=} & greater than or equal to \\
+    \texttt{==} & equal \\
+    \texttt{!=} & not equal \\ \hline
+  \end{tabular}
+\end{center}
+You can string logical statements together by using \texttt{\&} (``and'') and
+\texttt{|} (``or'').
+<<conjunctions>>=
+z > 3 & z < 10
+z[z > 3 & z < 10]
+z[z < 3 | z > 10]
+@ 
+Make sure not to accidentally use \texttt{=} instead of \texttt{==} when testing
+for equality.  A single equals sign is basically synonymous to \texttt{<-}, so
+this will result in your variable being overwritten.
+<<equals>>=
+x <- c(0, 1, 0, 2)
+x == 0  # good
+x = 0   # bad
+x
+@ %
+
+
+\section{Scripting}
+
+When you're using \R\ for data analysis, it is important that you \emph{save
+  your results} and \emph{be able to replicate them}.  The best way to do this
+is to run your \R\ code from scripts instead of at the interactive prompt.
+
+To see how this works, copy the following script into Notepad and save to your
+\texttt{Z:} drive as \texttt{test1.r}.
+\begin{minted}[frame=lines]{r}
+## FILE: test1.r
+## DESCRIPTION: First use of scripting in R
+## DATE: 2012-01-20
+## AUTHOR: You (you@rochester.edu)
+
+## Create some data
+mydata <- c(3, 7, 19, 23, 31, 42)
+
+## Compute some descriptive statistics
+mean.mydata <- mean(mydata)
+sd.mydata <- sd(mydata)
+\end{minted}
+<<script,echo=false>>=
+rm(list = ls())
+mydata <- c(3, 7, 19, 23, 31, 42)
+mean.mydata <- mean(mydata)
+sd.mydata <- sd(mydata)
+@ %
+
+You can now run the script by opening an \R\ session and using the
+\texttt{source} command.
+<<script1,eval=false>>=
+source("z:/test1.r")
+@ %
+It will now be as if you had typed each of the commands included in the script
+at the \R\ prompt.
+<<script2>>=
+ls()
+mydata
+mean.mydata
+@ %
+
+\subsection{Saving and Loading Data}
+
+You can also save the results of \R\ output using the \texttt{save} command.
+This can be placed inside a script (preferable), or you can run it at the prompt
+after the script has finished (riskier, if you're forgetful).  Just list the
+names of all the variables you want to save, followed by a \texttt{file}
+argument with the name of the file to save them in.
+<<save1,eval=false>>=
+save(mean.mydata, sd.mydata, file = "z:/results1.rda")
+@ %
+<<save1me,echo=false>>=
+save(mean.mydata, sd.mydata, file = "~/tmp/results1.rda")
+rm(list = ls())
+@ %
+You can use the \texttt{load} command to retrieve the variables that you saved.
+Close out of \R\ and open up a new session (tell it \emph{not} to save your
+workspace if it asks).  Now run the following commands.
+\begin{Schunk}
+\begin{Sinput}
+> ls()  # to make sure nothing's there
+\end{Sinput}
+\begin{Soutput}
+character(0)
+\end{Soutput}
+\begin{Sinput}
+> load("z:/results1.rda")
+> ls()
+\end{Sinput}
+\begin{Soutput}
+[1] "mean.mydata" "sd.mydata"  
+\end{Soutput}
+\end{Schunk}
+Your saved variables have been retrieved!
+
+\subsection{The Working Directory}
+
+When using \texttt{source}, \texttt{save}, and \texttt{load}, you may feel lazy
+and not want to type full file paths.  You can find out \R's ``working
+directory'' using the \texttt{getwd} command.  On Windows, the output will look
+like:
+\begin{Schunk}
+\begin{Sinput}
+> getwd()
+\end{Sinput}
+\begin{Soutput}
+[1] "C:/Windows/system32"
+\end{Soutput}
+\end{Schunk}
+On a Mac or Linux, it will look like:
+<<getwd>>=
+getwd()
+@ %
+If you run a command without specifying a path, such as in the following
+example, \R\ will assume you mean to place the file in (or take it from) the
+working directory.
+<<savewd,eval=false>>=
+save(x, file = "results.rda")
+@ %
+In most graphical interfaces for \R, there is a menu option to change the
+working directory.  If you want to change it from the prompt, use the
+\texttt{setwd} command.
+<<setwd,eval=false>>=
+setwd("C:/Users/username/directory/goes/here/")  # Windows
+setwd("/Users/username/directory/goes/here/")  # Mac
+setwd("~/directory/goes/here/")  # shorter way for Mac
+@ 
+
+\subsection{Text Editors for Scripting}
+
+You can use just about any plain-text editing program to write \R\ scripts.
+It's best to look for one that has the following features:
+\begin{itemize}
+  \item Syntax highlighting, which displays different features of your code in
+  different fonts or colors, as in the following example:
+  \begin{minted}[gobble=4]{r}
+    ## This is a comment
+    x <- rnorm(n = 5, mean = 10, sd = 2)
+    y <- sort(x, decreasing = TRUE)
+    z <- c("a", "b", "d")
+    f <- function(x) {   # another comment!
+      ans <- (x + 7) / 3
+      return(ans)
+    }
+  \end{minted}
+  
+  \item Side-by-side script editor and \R\ session, which you can use to test
+  commands in your script as you write it
+
+  \item Parentheses matching, which highlights the corresponding ``\texttt{(}''
+  when you type a ``\texttt{)}'', so you can keep track of commands like
+<<parenmatch,eval=false>>=
+round(exp(cos(sqrt(log(sd(x)^2)+1)/2))+sin(exp(pi)))
+@ 
+\end{itemize}
+
+Here are some of the most popular text editors and my thoughts about them.
+There are dozens of other good text editors out there --- don't be afraid to
+search, experiment, and find the one that works best for you.
+\begin{quote}
+  \begin{description}
+    \item[Built-in] The \R\ GUIs for Windows and Mac have built-in script
+    editors.  The one for Mac is pretty good.  The one for Windows \ldots\ not
+    so much.
+    \item[RStudio] Cross-platform.  Nice balance of functionality and
+    user-friendliness.  Useful for both scripting and interactive \R\ sessions.
+    \item[Emacs] Cross-platform.  The text editor of choice for programming
+    nerds.\footnote{Some nerds prefer Vi, but its support for \R\ and \LaTeX\ is
+      objectively inferior to that of Emacs.}  Also has excellent \LaTeX\
+    support.  Very steep learning curve.  I spent about two weeks of the summer
+    between my first and second year learning Emacs, and the investment has paid
+    off nicely for my productivity.
+    \item[RWinEdt] Windows only.  Hard to set up and otherwise basically awful,
+    unless you're the kind of person who just can't get enough of WinEdt.
+    \item[TextMate] Mac only, costs money.  A very good text editor, also with
+    \LaTeX\ support.
+    \item[TextWrangler] Mac only.  The best free all-around text editor on the
+    Mac if you don't want to spend money, but probably not as good for \R\ code
+    as the \R\ GUI's built-in editor.
+  \end{description}
+\end{quote}
+
+
+\section{Help!}
+
+Before we dive any further into \R, let's go over how to get help about it and
+find documentation.  I am not exaggerating when I say that \textbf{this is the
+  most important topic in the entire short course}.  If you have a problem with
+\R\ or can't figure out how to do something, chances are (1) someone else has
+had the same problem before and (2) the solution is available in \R's
+documentation, in an \R\ package, or somewhere on the World Wide Web.  The best
+way to look for help depends on what kind of issue you're having.
+
+\paragraph{1. You want to know more about a particular function.}
+Remember how we were able to compute a base 10 logarithm by calling
+\texttt{log} with the argument \texttt{base = 10}?  If we didn't know that
+\texttt{log} had an argument called \texttt{base}, how could we have found out?
+To pull up a help page for the \texttt{log} function, enter
+<<loghelp,eval=false>>=
+?log
+@ 
+at the prompt.  There is a documentation page available for just about every
+function included in \R\ or any of its packages.
+
+A function help page has the following sections:
+\begin{quote}
+  \begin{description}
+    \item[Description] What the function is supposed to do
+    \item[Usage] What a typical invocation of the function looks like
+    \item[Arguments] A list of function arguments and what each of them does
+    \item[Details] Additional information about the function and its arguments
+    \item[Value] What to expect from the output of a function (e.g., a single
+    number, a list of numbers, a matrix, something completely different)
+    \item[See Also] Other functions that may come in handy
+    \item[Examples] Illustrations of how to use the function
+  \end{description}
+\end{quote}
+In theory, the documentation page tells you everything you need to know about a
+function.  This is often the case.  However, keep in mind that these help pages
+are usually written by programmers, who are typically great at talking to
+computers but not so hot with humans.  Sometimes, the documentation for
+functions that should be very simple to explain (e.g., \texttt{sort}, which
+orders a vector of numbers from least to greatest) is the hardest to read.  In
+these cases, I recommend running the code from the ``Examples'' section and
+inspecting the output carefully.  The easiest way to do this is with the command
+<<example,eval=false>>=
+example(function_name)
+@ 
+
+A final note:  Sometimes the \texttt{?} syntax doesn't work.  For example, if
+you want help about addition and enter
+\begin{Schunk}
+\begin{Sinput}
+> ?+
+\end{Sinput}
+\end{Schunk}
+you end up with a continuation line and no help page.  To get what you're
+looking for, put what you're looking for in quotation marks inside the
+\texttt{help} function:
+<<helpadd2,eval=false>>=
+help("+")
+@ 
+
+\paragraph{2. You don't know what function to use.}
+Perhaps you have a task in mind but are unsure which \R\ function, if any, will
+do it for you.  If you have no idea what the appropriate function would even be
+called, use \texttt{help.search} to search the documentation of base \R\ and
+every package you have loaded.
+\begin{Schunk}
+\begin{Sinput}
+> help.search("ridge regression")
+\end{Sinput}
+\begin{Soutput}
+Help files with alias or concept or title matching
+'ridge regression' using fuzzy matching:
+
+MASS::lm.ridge    Ridge Regression
+mgcv::bam         Generalized additive models for
+                  very large datasets
+mgcv::bam.update  Update a strictly additive bam
+                  model for new data.
+mgcv::gam         Generalized additive models with
+                  integrated smoothness estimation
+survival::ridge   Ridge regression
+\end{Soutput}
+\end{Schunk}
+Syntax like \texttt{MASS::lm.ridge} means the function is called
+\texttt{lm.ridge} and is contained in the \texttt{MASS} package.  To use it, you
+would first have to run
+<<loadmass,eval=false>>=
+library(MASS)
+@ 
+to load the \texttt{MASS} package.  We'll talk more about packages later on in
+the course.
+
+In other cases, you may have a rough idea of what the relevant function would be
+named.  For example, suppose you know that \texttt{dnorm} can be used to
+calculate the density function for a normal distribution.  What other functions
+deal with the normal distribution?  To find out, use the \texttt{apropos}
+function.\footnote{One subtle difference between \texttt{help.search} and
+  \texttt{apropos} is that \texttt{help.search} searches base \R\ and all
+  packages that you have installed on your computer, while \texttt{apropos} only
+  searches base \R\ and the packages you have loaded in the current session.}
+<<apropos>>=
+apropos("norm")
+@ 
+This gives you a list of \R\ functions that have ``norm'' in their names.  You
+can then find out what each one does by using \texttt{?}.
+
+\paragraph{3. The first two don't apply or didn't work.}
+Maybe \texttt{help.search} drew a blank, or the documentation for the function
+you want to use is goobledygook.  Now it's time to
+\href{http://www.google.com}{Google}, which I assume you already know how to do.
+You might think Googling ``your problem here R'' would just return a bunch of
+useless pages from people whose middle initial is R or who have cutely tried to
+trademark their website name using ``(R)'', but I've found it usually works
+fine.  Other queries that will filter out more irrelevant material are ``your
+problem here R CRAN'' or ``your problem here R package''.
+
+There are also lists of \R-specific search engines available at
+\url{http://www.r-project.org/search.html} and
+\url{http://search.r-project.org}.  The mailing list archives can be especially
+helpful if you are trying to decipher an error message.  I don't recommend
+posting to the mailing list itself unless you have searched exhaustively for
+previous answers to your problem, have read the list's posting rules carefully,
+and are prepared to receive impolite or even nasty responses.
+
+\paragraph{4. Even Google isn't helpful.}
+\emph{Only} after you have tried Googling your problem is it appropriate to
+bother whichever more-advanced student is sitting near you in \textsc{the star
+  lab}.  (Exception: \textsc{star lab} fellows, myself included, are paid to be
+helpful and may be bothered without compunction at any point in the process.)
+
+
+\section{Additional Resources}
+
+These are some books (either printed or as PDFs) that might be useful as you
+learn \R.  This list isn't meant to be comprehensive --- it's just a set of the
+things I've run into that I've found useful at some time.
+
+\sloppy
+
+\begin{description}
+  \item[Verzani, \textit{simpleR}]
+  (\url{http://cran.r-project.org/doc/contrib/Verzani-SimpleR.pdf}) This is an
+  introduction to \R\ by John Verzani, meant to accompany an undergraduate-level
+  introductory statistics course.  Verzani later turned this into a printed
+  book, \textit{Using R for Introductory Statistics}
+  (\url{http://www.amazon.com/dp/1584884509}), which I believe \textsc{the star
+    lab} has a copy of.
+  
+  \item[Faraway, \textit{Practical Regression and Anova Using R}]
+  (\url{http://cran.r-project.org/doc/contrib/Faraway-PRA.pdf})  Kevin uses this
+  book when he teaches PSC 405.  It contains examples of how to implement most
+  basic regression techniques in \R.  A similar text that covers more advanced
+  econometric techniques is Farnsworth's \textit{Econometrics in R}
+  (\url{http://cran.r-project.org/doc/contrib/Farnsworth-EconometricsInR.pdf}).
+
+  \item[Braun and Murdoch, \textit{A First Course in Statistical Programming with
+    R}] (\url{http://www.amazon.com/dp/0521694248}) This is my favorite \R\
+  book.  Unlike most other books about \R, it focuses on programming in \R, not
+  just using canned \R\ features for data analysis.  Depending on your previous
+  programming experience, this means the book may not be useful until you have
+  more of a handle on \R\ itself.  In any case, I recommend reading this book
+  and working through its exercises before you take PSC 505 in the fall.
+  
+  \item[Burns, \textit{The R Inferno}]
+  (\url{http://www.burns-stat.com/pages/Tutor/R_inferno.pdf})  Patrick Burns
+  takes you through the nine circles of \R\ hell.  This is usually where I look
+  first when \R\ doesn't do what I expect or when I run into an error message
+  that makes no sense.  The utility of this guide will also become more apparent
+  once you've begun programming in \R.
+  
+  \item[Venables and Ripley, \textit{Modern Applied Statistics with S}]
+  (\url{http://www.stats.ox.ac.uk/pub/MASS4/}) This is \emph{the} statistician's
+  guide to \R,\footnote{Why is it called ``S'' in the title?  Technically, \R\
+    is just one dialect of the \textsf{S} language; for example, there is a
+    commercial dialect called \textsf{S-PLUS} that you'll still see mentioned
+    sometimes.  These days, as far as I know, \R\ is the only \textsf{S} dialect
+    that is actively developed and widely used.} %
+  written by two of the major contributors to the language.
+
+  \item[Many, many more] There's a whole list of additional free resources
+  available at \url{http://cran.r-project.org/other-docs.html}.
+\end{description}
+
+\fussy

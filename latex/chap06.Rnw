@@ -1,0 +1,281 @@
+\setkeys{Gin}{width=0.9\textwidth}
+\SweaveOpts{height=3.25}
+<<setup,echo=FALSE>>=
+options(prompt = "> ", continue = "+ ", useFancyQuotes = FALSE, width = 60,
+        str = strOptions(strict.width = "wrap"), digits = 5)
+@ 
+
+\chapter{Regression Tests and Diagnostics}
+
+Last time we saw how to fit regression models and perform some basic
+post-estimation analysis in \R.  Now we're going to see how to implement some
+more sophisticated tests and diagnostics.
+
+All of the functions that we're looking at today come from the \texttt{car} and
+\texttt{lmtest} packages.  As always, we only have enough time to scratch the
+surface.  To see the full set of functions in each package, run the following:
+<<helppkg,eval=FALSE>>=
+help(package = "car")
+help(package = "lmtest")
+@ %
+The CRAN Task View pages on Econometics
+(\url{http://cran.r-project.org/web/views/Econometrics.html}) and Social Science
+(\url{http://cran.r-project.org/web/views/SocialSciences.html}) contain
+information about and links to many more packages that extend the basic
+regression functionality in \R.
+
+
+\section{Robust Standard Errors}
+
+And by that I mean ``standard errors that are estimated consistently even if
+some ordinary regression assumptions [usually homoscedasticity] are violated''.
+In PSC 405, you've already seen the Huber--White variance--covariance matrix,
+\begin{displaymath}
+  \hat{\Sigma} = (X' X)^{-1} X' \Omega X (X'X)^{-1}.
+\end{displaymath}
+where $\Omega$ is a diagonal matrix with $\Omega_{ii} = e_i^2$.  This is easy
+enough to compute yourself if you want.  Let's illustrate with Chirot's data on
+the 1907 Romanian peasant rebellion, available as the \texttt{Chirot} data frame
+in the \texttt{car} package.
+<<chirot>>=
+library(car)
+data(Chirot)
+modelChirot <- lm(intensity ~ commerce + tradition + inequality,
+                  data = Chirot)
+X <- model.matrix(modelChirot)
+XtXi <- solve(t(X) %*% X)
+e <- residuals(modelChirot)
+vhat <- XtXi %*% t(X) %*% diag(e^2) %*% X %*% XtXi
+vhat
+vcov(modelChirot)
+@ %
+Though simple, it's tedious (and potentially error-prone) to compute this
+yourself.  You can instead use the \texttt{hccm} function from the \texttt{car}
+package.
+<<hccm>>=
+vhat1 <- hccm(modelChirot, type = "hc0")
+vhat1
+@ %
+The \texttt{type} argument specifies how you want $\Omega$ to be computed.
+\texttt{"hc0"} stands for White's original formulation with $e_i^2$'s along the
+diagonal; other options, such as the default \texttt{"hc3"}, provide
+formulations that are also consistent against heteroscedasticity\footnote{``hc''
+  = ``heteroscedasticity consistent''} but have arguably better finite-sample
+properties.  See the references section in \texttt{?hccm}, or in the almost
+identical \texttt{?sandwich::vcovHC},\footnote{Remember that \texttt{pkg::fn}
+  indicates the function \texttt{fn} in the package \texttt{pkg}.} for details
+on these alternatives.
+
+Remember from last time that you can display the standard regression table by
+running \texttt{summary} on the output of \texttt{lm}.  But what if you want the
+table to be shown with the robust standard errors?  Use the function
+\texttt{coeftest} from the \texttt{lmtest} package:
+<<coeftest>>=
+library(lmtest)
+coeftest(modelChirot, vcov = vhat1)
+@ 
+
+
+\section{Wald Tests}
+
+You have also seen in PSC 405 that the Wald test can be used to evaluate any
+linear hypothesis of the form
+\begin{displaymath}
+  R\beta = r,
+\end{displaymath}
+where $R$ is $m \times k$.  To jog your memory, the Wald statistic is
+\begin{displaymath}
+  W = (R \hat{\beta} - r)' (R \hat{\Sigma} R')^{-1} (R \hat{\beta} - r),
+\end{displaymath}
+which is asymptotically distributed $\chi^2_m$.  Once again, we have something
+that is possible to compute by hand but is better done automatically.  Let's
+first simulate some data and run a regression.
+<<simdata>>=
+n <- 50
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+x3 <- rnorm(n)
+y <- 1 + 2*x1 + 2*x2 + rnorm(n)
+modelSim <- lm(y ~ x1 + x2 + x3)
+modelSim
+@ %
+Suppose we want to test the hypothesis that $\beta_1 = \beta_2$, which can be
+represented in matrix form with $R = \begin{bmatrix} 0 & 1 & -1 &
+  0 \end{bmatrix}$ and $r = [0]$.
+<<waldbyhand>>=
+R <- matrix(c(0, 1, -1, 0), ncol = 4)
+b <- coef(modelSim)
+V <- vcov(modelSim)
+W <- t(R %*% b) %*% solve(R %*% V %*% t(R)) %*% (R %*% b)
+W
+1 - pchisq(W, df = 1)
+@ %
+We can accomplish this much more easily with the \texttt{linearHypothesis}
+function from the \texttt{car} package.
+<<waldcanned>>=
+linearHypothesis(modelSim, "x1 = x2", test = "Chisq")
+@ %
+We get the same test statistic and $p$-value without having to remember all that
+matrix algebra.  If you want an $F$ test instead of a $\chi^2$ test, you can
+omit the \texttt{test} argument or set \texttt{test = "F"}.  You can also set
+\texttt{white.adjust = "hc0"} to use the robust variance--covariance matrix to
+compute the test statistic, or supply your own personal favorite $\hat{\Sigma}$
+via the \texttt{vcov} argument.
+
+The syntax of \texttt{linearHypothesis} is fairly flexible, and its help page
+contains numerous illustrations.  Some examples of valid specifications:
+<<lhsyntax,eval=FALSE>>=
+linearHypothesis(modelSim, "x1 - x2 = 0")
+linearHypothesis(modelSim, "x1 + x2 = 4")
+linearHypothesis(modelSim, c("x1 = x2", "x1 = x3"))
+linearHypothesis(modelSim, c("x1 = 0", "x2 = 2*x3"))
+@ 
+
+
+\section{Additional Tests}
+
+Here are \R implementations of some other diagnostic tests and statistics that
+you've covered in PSC 405.  We'll set up with some simulated data that suffers
+from heteroscedastic, autocorrelated, non-normal disturbances.
+<<makedata>>=
+N <- 1000
+x1 <- rnorm(N)
+x2 <- rnorm(N)
+phi <- 0.5
+e <- arima.sim(list(ar = phi), n = 1000, rand.gen = rlnorm)
+e <- abs(x1) * e
+y <- 1 + x1 - x2 + e
+modelOLS <- lm(y ~ x1 + x2)
+modelOLS
+@ 
+
+\paragraph{AIC and BIC.}
+These are included in base \R and can be run on virtually any statistical
+model.
+<<aicbic>>=
+AIC(modelOLS)
+BIC(modelOLS)
+@ 
+
+\paragraph{Breusch-Pagan and White tests.}
+The Breusch-Pagan test is included via the function \texttt{bptest} in the
+\texttt{lmtest} package.
+<<bptest>>=
+library(lmtest)
+bptest(modelOLS)
+@ %
+The White test is a special case of the Breusch-Pagan test and can be
+implemented with an additional argument to the \texttt{bptest} function.
+Unfortunately, when you have a large number of variables the manual
+implementation can be somewhat tedious, but there does not appear to exist a
+completely canned version in a reputable package.
+<<whitetest>>=
+bptest(modelOLS, ~ x1*x2 + I(x1^2) + I(x2^2))
+@ 
+
+\paragraph{Kolmogorov-Smirnov test.}
+The Kolmogorov-Smirnov test is included in base \R via the \texttt{ks.test}
+function.  To test whether the residuals follow a certain distribution, supply
+a function giving the CDF of that distribution.
+<<kstest>>=
+e.standard <- residuals(modelOLS) / sd(residuals(modelOLS))
+ks.test(e.standard, pnorm)
+@ 
+
+\paragraph{Shapiro-Wilk test.}
+The Shapiro-Wilk test for normality is included in base \R via the
+\texttt{shapiro.test} function.
+<<shapirotest>>=
+shapiro.test(residuals(modelOLS))
+shapiro.test(rnorm(10, sd = 2))
+@ 
+
+\paragraph{Jarque-Bera test.}
+The Jarque-Bera test for normality is included via the \texttt{jarque.bera.test}
+function in the \texttt{tseries} package.
+<<jbtest>>=
+library(tseries)
+jarque.bera.test(residuals(modelOLS))
+@ 
+
+\paragraph{Durbin-Watson test.}
+The Durbin-Watson test for autocorrelation is included via the \texttt{dwtest}
+function in the \texttt{lmtest} package.
+<<dwtest>>=
+library(lmtest)
+dwtest(modelOLS)
+@ 
+
+
+
+\section{Diagnostic Plots}
+
+% see
+% http://polisci.msu.edu/jacoby/icpsr/regress3/lectures/week4/14.Nonlinearity.pdf
+% page 12
+
+The \texttt{car} package also provides functionality for two kinds of
+residual-based plots that can help illustrate regression results and diagnose
+violations of the standard assumptions.
+
+\subsection{Partial Regression Plots}
+
+Also known as \emph{added-variable plots}, these illustrate the conditional
+relationship between $Y$ and $X_j$ after ``integrating out'' the other
+regressors, $X_{-j}$.  To form a partial regression plot, we plot the residuals
+of a regression of $Y$ on $X_{-j}$ against those of a regression of $X_j$ on
+$X_{-j}$.  Once again, we'll first do this by hand for \texttt{inequality} in
+the Chirot data.
+\begin{center}
+<<prp-byhand,fig=TRUE,height=4>>=
+ey <- residuals(lm(intensity ~ commerce + tradition,
+                   data = Chirot))
+ex <- residuals(lm(inequality ~ commerce + tradition,
+                   data = Chirot))
+plot(ex, ey, xlab = "inequality | others",
+     ylab = "intensity | others")
+abline(lm(ey ~ ex))
+@
+\end{center}
+We can get an easier, better-looking, more comprehensive version by running
+\texttt{avPlots} (from the \texttt{car} package) on our original fitted model.
+\begin{center}
+<<avPlots,fig=TRUE,height=4.5>>=
+avPlots(modelChirot)
+@ 
+\end{center}
+The main use of partial regression plots is to determine whether there are any
+outliers that have a lot of influence on the regression coefficient.  You may be
+tempted to use naive plots of $Y$ against each $X_j$ for this task, but partial
+regression plots are better.  Unlike in the naive plots, the slope of the
+bivariate regression line in a partial regression plot is equal to the
+corresponding coefficient in the full regression.
+
+\subsection{Component-Residual Plots}
+
+Another common problem in regression is that the partial relationship between
+$Y$ and $X_j$ is not actually linear, and that $X_j$ may need to be transformed
+in order for the regression to fit well.  The standard diagnostic tool in this
+case is a component-residual plot, where $X_j' \beta_j + e$ is plotted against
+$X_j$.  We'll try it first by hand.
+\begin{center}
+<<crp-byhand,fig=TRUE,height=4>>=
+b1 <- coef(modelChirot)[2]
+x <- Chirot$commerce
+cr <- b1 * x + residuals(modelChirot)
+plot(x, cr, xlab = "commerce", ylab = "component + residuals")
+abline(lm(cr ~ x))
+lines(lowess(cr ~ x), lty = 2)
+@ %
+\end{center}
+As was the case in partial residual plots, the coefficient of the regression of
+the component+residual on $X_j$ is the same as its coefficient in the full
+regression.  Notice also that we've used \texttt{lowess} to superimpose a
+smoothed estimate of the bivariate relationship in order to detect potential
+nonlinearity.  We can make these plots even more easily with the
+\texttt{crPlots} function from the \texttt{car} package.
+\begin{center}
+<<crPlots,fig=TRUE,height=5>>=
+crPlots(modelChirot)
+@ 
+\end{center}

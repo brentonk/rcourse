@@ -1,0 +1,48 @@
+\documentclass[11pt,oneside]{book}
+\usepackage[noae]{Sweave}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+%% \usepackage{sectsty}
+\usepackage{ccicons}
+\usepackage{xspace}
+\usepackage{minted}
+%\usepackage[margin=1in]{geometry}
+\usepackage[colorlinks=true,citecolor=Teal]{hyperref}
+
+\usepackage[charter]{mathdesign}
+\usepackage[scaled]{luximono}
+\usepackage[scaled]{helvet}
+%% \sectionfont{\LARGE\sffamily}
+%% \subsectionfont{\Large\sffamily}
+
+\newcommand{\R}{{\sffamily R}\xspace}
+
+%% Customize the look of Sweave output
+\DefineVerbatimEnvironment{Sinput}{Verbatim} {xleftmargin=2em}
+\DefineVerbatimEnvironment{Soutput}{Verbatim}{xleftmargin=2em}
+\DefineVerbatimEnvironment{Scode}{Verbatim}{xleftmargin=2em}
+\fvset{listparameters={\setlength{\topsep}{0pt}}}
+\renewenvironment{Schunk}{\vspace{\topsep}}{\vspace{\topsep}}
+
+
+\title{An Introduction to \R}%
+\author{Brenton Kenkel\\on behalf of \textsc{the star lab}}
+
+% Start with Chapter 0
+\setcounter{chapter}{-1}
+
+\begin{document}
+
+\include{front}
+\include{chap00}
+\include{chap01}
+\include{chap02}
+\include{chap03}
+\include{chap04}
+\include{chap05}
+\include{chap06}
+\include{chap07}
+
+\end{document}

@@ -1,0 +1,220 @@
+<<setup,echo=false>>=
+options(prompt = "> ", continue = "+ ", useFancyQuotes = FALSE, width = 60)
+@ 
+
+\chapter{Matrices}
+
+Matrix algebra is at the heart of basically every statistical technique for
+multivariate data analysis.  So if you want to do serious statistics in \R, you
+need to learn about its matrix algebra features.
+
+\section{Creating Matrices}
+
+The most straightforward way to create a matrix is with the \texttt{matrix}
+command, which takes a vector and shapes it into a matrix.  You provide the
+command with a vector and use the arguments \texttt{nrow} or \texttt{ncol} to
+specify the dimensions.
+<<makemat1>>=
+x <- 1:6
+matrix(x, nrow = 2)
+matrix(x, ncol = 2)
+@ %
+Notice that by default the matrix is filled column-wise.  Use the
+\texttt{byrow} argument to fill by rows.
+<<makemat2>>=
+matrix(x, ncol = 2, byrow = TRUE)
+@ %
+You can also create matrices by ``binding'' vectors together.  \texttt{cbind}
+treats the vectors as columns, while \texttt{rbind} treats them as rows.
+<<bind>>=
+y <- 4:9
+cbind(x, y)
+rbind(x, y)
+@ %
+The \texttt{diag} command (as in ``diagonal'') has a few different uses.
+<<diag>>=
+diag(4)  # 4 x 4 identity matrix
+diag(x)  # square matrix with x along the diagonal
+Z <- matrix(1:9, nrow = 3)
+Z
+diag(Z)  # extract the diagonal vector from a matrix
+@ %
+
+Sometimes you want to turn a matrix back into a vector.  The easiest way to do
+this is to place the matrix within \texttt{c}, which makes a vector by going
+down the columns of the matrix.
+<<backtovec>>=
+c(Z)
+@ %
+A sometimes useful tool is the \texttt{drop} command, which turns one-row or
+one-column matrices into vectors but preserves the structure of others.
+<<drop>>=
+X1 <- matrix(1:4, nrow = 2)
+X2 <- matrix(1:4, nrow = 1)
+X1
+drop(X1)  # no change
+X2
+drop(X2)  # back to vector
+@ %
+If you're ever in doubt about whether something is a matrix, check its
+\texttt{class}.
+<<class>>=
+class(X2)
+class(drop(X2))
+@ %
+If the class is \texttt{"integer"} or \texttt{"numeric"}, you have a vector, not
+a matrix.
+
+\section{Matrix Attributes}
+
+Recall that we used the square brackets to extract elements from a vector.
+<<vecreview>>=
+x <- 12:1
+x[3]
+@ %
+The syntax to extract elements from a matrix is similar.  If \texttt{X} is a
+matrix, \texttt{X[i, j]} gives you the $j$th element of the $i$th row.
+<<slice1>>=
+X <- matrix(12:1, nrow = 3)
+X
+X[2, 4]
+@ %
+As with vectors, you can use this to change the value of a single entry in a
+matrix.
+<<slice15>>=
+X[3, 2] <- 8
+X
+@ 
+
+You can extract an entire row by leaving the column entry blank, or vice
+versa. \nolinebreak
+<<slice2>>=
+X[1, ]  # first row
+X[, 3]  # third column
+@ %
+Notice that when you extract a single row or column, the output is a vector.  To
+preserve the matrix structure, use the \texttt{drop = FALSE} argument.
+<<slice3>>=
+X[, 3, drop = FALSE]
+@ %
+All of the special indexing rules that we learned about last time also work for
+matrices.
+<<slice4>>=
+X[, 2] == 8  # which rows have 8 in the second column?
+X[X[, 2] == 8, ]
+@ 
+
+If you want to find out the dimension of a matrix without printing all of it to
+the \R\ console, use \texttt{dim}.
+<<dim>>=
+dim(X)
+@ %
+The \texttt{nrow} and \texttt{ncol} commands do what you'd expect.
+<<nrowncol>>=
+nrow(X)
+ncol(X)
+@ 
+
+\section{Mathematical Operations}
+
+All of the matrix operations you'd expect to see are available in \R.  First,
+some basic matrix arithmetic.
+<<easymath>>=
+X <- matrix(1:4, nrow = 2)
+Y <- diag(2)  # identity matrix
+X + Y
+X - Y
+@ %
+Be warned: the standard multiplication command, \texttt{*}, performs
+\emph{elementwise} multiplication.  Use \texttt{\%*\%} for actual matrix
+multiplication.
+<<mult1>>=
+X * Y
+X %*% Y
+@ %
+If you try to multiply a matrix by a vector, \R\ automatically treats the vector
+as a row or column vector depending on context.
+<<mult2>>=
+c(1, 1) %*% X
+X %*% c(1, 1)
+@ %
+The transpose is provided by \texttt{t}.
+<<t>>=
+t(X)
+@ 
+
+You can invert matrices --- the crucial step in linear regression and many other
+statistical procedures --- via the \texttt{solve} command.
+<<solve>>=
+solve(X)
+solve(X) %*% X
+@ %
+It is important to note that numerical matrix inversion is \emph{not} an exact
+science.  The results you obtain from \texttt{solve} are only accurate up to a
+certain decimal place, normally no greater than the 16th.\footnote{This is
+  because \R, like almost every computer program, uses a floating-point
+  representation of fractional numbers.  See the entry ``Why doesn't \R\ think
+  these numbers are equal?'' in the official \R\ FAQ,
+  \url{http://cran.r-project.org/doc/FAQ/R-FAQ.html}.}  To illustrate this,
+let's invert a matrix of random numbers.  (Your results will differ slightly
+due to randomness.)
+<<seed,echo=false>>=
+set.seed(21)
+@ 
+<<solve1>>=
+Z <- matrix(rnorm(16), nrow = 4)
+solve(Z) %*% Z
+@ 
+Notice that what we get back isn't \emph{exactly} an identity matrix but is
+really close.
+<<solve2>>=
+round(solve(Z) %*% Z, digits = 12)
+@ %
+Luckily, this level of precision is more than accurate enough for most normal
+data analysis applications in political science.
+
+Let's go through a few more useful matrix operations.  \texttt{det} and
+\texttt{chol} give you the determinant and the Cholesky decomposition
+respectively.
+<<detchol>>=
+Y <- matrix(c(1, .5, .5, 1), nrow = 2)
+det(Y)
+chol(Y)
+t(chol(Y)) %*% chol(Y)
+@ %
+There's no ``trace'' command included, but it's easy to compute by hand by
+taking the sum of the diagonal.
+<<trace>>=
+sum(diag(Y))
+@ %
+\texttt{eigen} gives you eigenvalues and eigenvectors.
+<<eigen>>=
+eigen(Y)
+@ %
+The output of this command requires a brief detour into some \R\ syntax.  This
+is the first example you'll see of a \emph{list} in \R.  A list is just a
+collection of \R\ objects, possibly all of different types.  You can see above
+that \texttt{values} is a vector while \texttt{vectors} is a matrix.  To extract
+one component of a list, use \texttt{\char"0024}:
+<<getlist>>=
+eigen(Y)$values
+@ %
+<<echo=false,eval=false>>=
+## extra dollar sign to keep auctex from getting confused
+##$
+@ %
+We'll be seeing a lot of lists throughout this course --- the output of most
+data analysis procedures in \R\ is a list.  One more useful command before we
+move on is \texttt{names}, which tells you the named elements of a list.
+<<names>>=
+names(eigen(Y))
+@ %
+The last matrix operation we'll look at is the rank.  Again, there's no ``rank''
+command, but you can compute it via the QR decomposition.
+<<rank>>=
+x1 <- rnorm(5)
+x3 <- rnorm(5)
+x2 <- x1 - x3  # linearly dependent
+X <- cbind(x1, x2, x3)
+qr(X)
+@ %

@@ -1,0 +1,213 @@
+\setkeys{Gin}{width=0.9\textwidth}
+\SweaveOpts{height=3.25}
+<<setup,echo=FALSE>>=
+options(prompt = "> ", continue = "+ ", useFancyQuotes = FALSE, width = 60,
+        str = strOptions(strict.width = "wrap"), digits = 5)
+@ 
+
+\chapter{Linear Regression}
+
+We now arrive at what you'll primarily be using \R for: data analysis,
+particularly multivariate regression modeling.  In this chapter we'll look at
+the basic features of \texttt{lm}, the linear modeling command.  Future chapters
+will cover more advanced regression techniques.
+
+
+\section{Running a Regression}
+
+To run a regression in \R, use the \texttt{lm} (``linear model'') command.  This
+command has a number of arguments, the most important of which are:
+\begin{quote}
+  \begin{description}
+    \item[\tt formula] The model formula, generally of the form \texttt{y \~\ x1 +
+      x2 + ...}, where \texttt{y} is the response variable and the \texttt{x}'s
+    are regressors.  We'll go through the intricacies of formula syntax in just
+    a bit.
+    
+    \item[\tt data] The data frame to take the variables from.  If none is
+    specified, \texttt{lm} looks for the variables in the global environment
+    (i.e., the objects you see when you run \texttt{ls()}).
+    
+    \item[\tt subset] A logical statement indicating a subset of the data to
+    include in the regression.
+    
+    \item[\tt weights] A variable containing weights for each observation.
+    
+    \item[\tt na.action] How to deal with \texttt{NA}s (missing data); the
+    default is to delete any observation with missingness.
+  \end{description}
+\end{quote}
+
+We'll use the \texttt{Highway1} dataset from the \texttt{car} package to
+illustrate the \texttt{lm} function.
+<<highway1>>=
+library(car)
+data(Highway1)
+str(Highway1)
+@ %
+The response variable is \texttt{rate}, the number of accidents per million
+vehicle miles in 1973.  We'll look at the following independent variables:
+\begin{quote}
+  \begin{description}
+    \item[\tt ADT] Average daily traffic count in thousands
+    \item[\tt trks] Truck volume as a percent of the total volume
+    \item[\tt slim] Speed limit in 1973
+    \item[\tt shld] Width in feet of the outer shoulder
+  \end{description}
+\end{quote}
+To regress the accident rate on these variables, we run:
+<<modelMain>>=
+modelMain <- lm(rate ~ ADT + trks + slim + shld,
+                data = Highway1)
+modelMain
+@ %
+Notice that we have assigned the regression output to a variable,
+\texttt{modelMain}, so that we can further analyze the results later without
+having to run the regression again.  If we only cared about the relationship
+among 4-lane highways, we would use the \texttt{subset} argument:
+<<model4lane>>=
+model4lane <- lm(rate ~ ADT + trks + slim + shld,
+                 data = Highway1, subset = lane == 4)
+model4lane
+@ %
+We could have done this even more easily with \texttt{update}.
+<<updatelm>>=
+update(modelMain, subset = lane == 4)
+@ 
+
+\subsection{Formula Syntax}
+
+If you want to use interaction terms, transform some variables, or drop the
+intercept, you need to specify the formula slightly differently.
+
+\bigskip%
+\noindent%
+To drop the intercept:
+<<no-intercept,eval=FALSE>>=
+y ~ x1 + x2 - 1
+@ %
+To include $x_2^2$:
+<<quadratic,eval=FALSE>>=
+y ~ x1 + x2 + I(x2^2)
+@ %
+To force $x_1$ and $x_2$ to have the same coefficient:
+<<force-add,eval=FALSE>>=
+y ~ I(x1 + x2)
+@ 
+To log-transform $x_2$:
+<<log-transform,eval=FALSE>>=
+y ~ x1 + log(x2)
+@ %
+To include $x_1$, $x_2$, and $x_1 \times x_2$:
+<<interact1,eval=FALSE>>=
+y ~ x1*x2
+@ %
+To include only $x_1 \times x_2$:
+<<interact2,eval=FALSE>>=
+y ~ x1:x2
+@ 
+
+
+\section{Analyzing the Output}
+
+The output of \texttt{lm} is a list that contains many objects.
+<<lm-out>>=
+names(modelMain)
+@ %
+You can see a description of each of these in the ``Value'' section of
+\texttt{?lm}.  There are also a number of functions that extract key features of
+\texttt{lm} output and other fitted regression models (e.g., logistic
+regressions) in \R.
+<<generic>>=
+coef(modelMain)  # coefficients
+vcov(modelMain)  # variance-covariance matrix
+residuals(modelMain)  # residuals
+fitted(modelMain)  # fitted values
+@ %
+
+For better or worse, you will usually want to see the typical ``regression
+table'' of the coefficients with their standard errors and $p$-values, along
+with the $R^2$ and some other summary statistics.  You can get this using the
+\texttt{summary} command:
+<<summary>>=
+summary(modelMain)
+@ %
+If you want, you can see ``significance stars'' by setting
+\texttt{options(show.signif.stars = TRUE)}.  (Or, sadly, you probably don't have
+to do anything, since this was the default option in \R the last time I
+checked.)  Note that the output of \texttt{summary} is itself a list:
+<<summary1>>=
+names(summary(modelMain))
+@ %
+You can use this to extract $\hat{\sigma}$ or the $R^2$ values.
+
+As you may or may not find out in PSC 405, there are some regression diagnostics
+(e.g., checking for heteroscedasticity or outlier influence) that are best
+accomplished graphically.  \R provides a \texttt{plot} method for \texttt{lm}
+objects so that you can run these tests easily.
+\begin{center}
+<<plotlm,fig=TRUE,height=6>>=
+par(mfrow = c(2, 2))
+plot(modelMain)
+@ %
+\end{center}
+See \texttt{?plot.lm} for descriptions of these plots and appropriate
+references.
+
+
+\section{Presenting Results}
+
+You're eventually going to want to get your regression out of \R and into a
+\LaTeX\ paper or a presentation.  Here are some ways to make that easier for
+yourself.
+
+\subsection{Tables}
+
+You can automatically generate \LaTeX\ code for the archetypical regression
+table using the \texttt{xtable} package.
+<<xtable1>>=
+library(xtable)  # scofflaws may need to install
+xtable(modelMain)
+@ %
+There are many options you can use to control the look and feel of the output;
+see \texttt{?xtable} and \texttt{?print.xtable}.
+<<xtable2>>=
+xt <- xtable(modelMain, digits = 2, label = "tab:xt",
+             caption = "\\texttt{xtable} output")
+print(xt,
+      math.style.negative = TRUE,
+      table.placement = "t")
+@ %
+<<echo=FALSE,results=tex>>=
+<<xtable2>>
+@ %
+See Figure~\ref{tab:xt} for how the output looks.  If you want to be real fancy,
+you can use the \texttt{file} option of \texttt{print.xtable} to write the
+output directly to a file, then use \texttt{\textbackslash{}input} in \LaTeX\ to
+read it in.  This way, if you change your \R script and your results change,
+your table will automatically change as well.
+
+\subsection{Coefficient Plots}
+
+One of the new signaling devices among job candidates is to present regression
+results graphically (instead of in a table) in their job talk.  You may as well
+learn how to do this too.  It's not too hard to hand-roll these plots, but a
+canned version is available in the \texttt{coefplot} package.\footnote{This plot
+  looks different than the ones we made earlier because it uses the
+  \texttt{ggplot2} package as a backend instead of base \R graphics.  You could
+  teach a whole course on \texttt{ggplot2} itself, so it's beyond our scope
+  here.  However, there are many easy-to-follow tutorials about \texttt{ggplot2}
+  online.  I use \texttt{ggplot2} in all of my own work, and I encourage you to
+  learn it on your own too.}
+\begin{center}
+<<cfplot,fig=TRUE>>=
+library(coefplot)  # may need to be installed
+coefplot(modelMain, intercept = FALSE)
+@ %
+\end{center}
+The dots represent point estimates, and the lines represent two standard errors
+(roughly the 95\% confidence interval) around each.  So we can immediately see
+statistical signifiance at the ordinary\footnote{i.e., arbitrary} level by
+looking for coefficients whose bands don't cross $0$.  As always, there are tons
+of options to change the substance and look of the plot, which you can read
+about in \texttt{?coefplot} and \texttt{?coefplot.lm}.
