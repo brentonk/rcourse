@@ -6,6 +6,8 @@ This repository contains the notes for a short course on R that I taught
 [the star lab](https://www.rochester.edu/college/psc/thestarlab/)) to
 first-year PhD students in political science at the University of Rochester.
 
+The notes are available in PDF format [at this link](latex/rcourse.pdf).
+
 The notes are licensed under a
 [Creative Commons Attribution license](http://creativecommons.org/licenses/by/3.0/),
 which allows you to share and modify them as long as you attribute this work.

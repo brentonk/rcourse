@@ -15,9 +15,6 @@ resources/*
 latex/chap??.tex
 latex/chap??-*.pdf
 
-## The final output
-latex/rcourse.pdf
-
 ## R history
 .Rhistory
 
